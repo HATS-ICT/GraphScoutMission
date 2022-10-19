@@ -10,6 +10,10 @@ PATH_LOOKUP = {
 }
 
 
+# assign a large int for no connectivity to replace "null" in graph generation pipeline
+INDEX_INVAL = 911
+
+
 # raw data files for parsing
 RAW_DATA_LOOKUP = {
     "f_connectivity": "connectivity_NSWE_116.txt",

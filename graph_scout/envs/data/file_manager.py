@@ -5,10 +5,10 @@ from graph_scout.envs.data.terrain_graph import MapInfo
 import graph_scout.envs.data.file_lookup as fc
 
 def load_graph_files(env_path="./", map_lookup="Std"):
-    assert check_dir(env_path), "[GSMEnv][Error] Invalid path for loading env data: {}".format(env_path)
+    assert check_dir(env_path), "[GSMEnv][File] Invalid path for loading env data: {}".format(env_path)
 
     path_data = os.path.join(env_path, fc.PATH_LOOKUP["file_o"])
-    assert check_dir(path_data), "[GSMEnv][Error] Can not find data in: {}".format(path_data)
+    assert check_dir(path_data), "[GSMEnv][File] Can not find data in: {}".format(path_data)
 
     map_id = fc.MAP_LOOKUP[map_lookup]
     graph_move = find_file_in_dir(path_data, "{}{}.pickle".format(fc.DATA_LOOKUP["d_connectivity"], map_id))
@@ -23,9 +23,9 @@ def load_graph_files(env_path="./", map_lookup="Std"):
 
 
 def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
-    assert check_dir(env_path), "[GSMEnv][Error] Invalid path for graph data files: \'{}\'".format(env_path)
+    assert check_dir(env_path), "[GSMEnv][File] Invalid path for graph data files: \'{}\'".format(env_path)
     path_file = os.path.join(env_path, fc.PATH_LOOKUP["file_i"])
-    assert check_dir(path_file), "[GSMEnv][Error] Can not find data in: {}".format(path_file)
+    assert check_dir(path_file), "[GSMEnv][File] Can not find data in: {}".format(path_file)
 
     path_obj = os.path.join(env_path, fc.PATH_LOOKUP["file_o"])
     if not check_dir(path_obj):
@@ -36,100 +36,127 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
     # check exists of parsed files [option: overwrite existing files if the flag turns on]
     graph_move, _move = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["d_connectivity"], map_id))
     graph_view, _view = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["d_visibility"], map_id))
-    obj_pos, _pos = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["position"], map_id))
+    obj_map, _map = = find_file_in_dir(path_data, "{}{}.pickle".format(fc.DATA_LOOKUP["d_mapping"], map_id))
+    obj_pos, _pos = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["d_coordinates"], map_id))
 
     if if_overwrite:
-        if True in [_acs, _vis, _pos]:
-            print("[GSMEnv][Warning] Overwrite previous saved parsing results in \'{}\'".format(env_path))
+        if True in [_move, _view, ,_map, _pos]:
+            print("[GSMEnv][Info] Overwrite previous saved parsing data in \'{}\'".format(env_path))
         else:
             print("[GSMEnv][Info] Start parsing raw data. Parsed data will be saved in \'{}\'".format(env_path))
     else:
-        print("[GSMEnv][Info] Start parsing raw data. Data will *NOT* save to files. [online mode]")
+        print("[GSMEnv][Info] Start parsing raw data. Objects will *NOT* be saved or overwrited. <online mode>")
 
-    # check exists of raw data files
-    # find node connectivity file
-    data_edge_move = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_connectivity"])
-    # find visibility & probablity files
-    data_edge_view = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_visibility"])
-    # find node absolute coordinate file
-    data_node_coor = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_coordinates"])
+    # check existance of raw data files
 
-    # IOs in node connectivity file
-    file = open(data_edge_move, 'r')
-    lines = file.readlines()
-    for line in lines:
-        nodes = connection_line_parser(line)
-        u_name = None
-        for idx, node in enumerate(nodes):
-            row, col = int(node[0]), int(node[1])
-            if row == INDEX_INVAL:  # check placeholder for invalid 'null' actions [skip and continue]
-                continue
-            node_name = "{}_{}".format(row, col)
-            cur_map.add_node_acs(node_name)
-            if idx:
-                # add edges to all four target nodes
-                cur_map.add_node_acs(node_name)
-                # index number is the attribute for action lookup NSWE
-                cur_map.add_edge_acs(u_name, node_name, idx)
+    # check node connectivity file
+    data_raw_move = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_connectivity"])
+    # check node absolute coordinate file
+    data_raw_coor = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_coordinates"])
+    # check visibility & probablity files
+    data_raw_view = [find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_visibility"][_file]) for _file in fc.RAW_DATA_LOOKUP["r_visibility"]]
+
+    # preprocessing & utilities for raw data conventions
+    from graph_scout.envs.data.node_coor_mapping import dict_node_id_pos
+    from copy import deepcopy
+    dict_table = dict_node_id_pos
+
+    list_n_id = list(dict_table.keys())
+    list_n_pos = list(dict_table.values())
+    def get_id_from_pos(_row, _col):
+        return list_n_id[list_n_pos.index((_row, _col))]
+
+    # generate a graph container instance
+    cur_map = MapInfo()
+    cur_map.n_table = deepcopy(dict_table)
+    cur_map.add_node_init_list(list_n_id)
+
+    # parse data in node connectivity file
+    with open(data_raw_move, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            list_pos = connection_line_parser(line)
+            for index, node in enumerate(list_pos):
+                row, col = int(node[0]), int(node[1])
+                # check placeholder (0,0) for invalid 'null' actions [skip and continue]
+                if row == 0 and col == 0:  
+                    continue
+                n_id = get_id_from_pos(row, col)
+                if index:
+                    # directed edge source->target with the attribute for action lookup 'NSWE->1234'
+                    cur_map.add_edge_Gmove(u_id, n_id, index)
+                else:
+                    # the first node (index == 0) is the source node in each line
+                    u_id = n_id
+
+    # parse data in node absolute coordinate file
+    with open(data_raw_coor, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            s_pos, s_coord = coordinate_line_parser(line)
+            n_id = get_id_from_pos(int(s_pos[0]), int(s_pos[1]))
+            if n_id in cur_map.n_table:
+                # store X & Z coordinates for ploting
+                cur_map.n_coord[n_id] = (float(s_coord[0][0]), float(s_coord[0][2]))
+                # store elevation info for interacting calculations
+                cur_map.g_move.nodes[n_id]["height"] = float(s_coord[0][1])
             else:
-                # the first node is the source node
-                u_name = node_name
+                raise ValueError("[GSMEnv][Data] Invalid node coordinates.")
 
-    # IOs in node visibility file
-    file = open(data_edge_vis, 'r')
-    lines = file.readlines()
-    for line in lines:
-        # get target node and source nodes in four directions
-        u_node, v_list_N, v_list_S, v_list_W, v_list_E = visibility_fov_line_parser(line)
-        u_name = "{}_{}".format(int(u_node[0][0]), int(u_node[0][1]))
-        if u_name in cur_map.n_name:
-            node_dict = {1: v_list_N, 2: v_list_S, 3: v_list_W, 4: v_list_E}
-            for idx in node_dict:
-                for v_node in node_dict[idx]:
-                    v_name = "{}_{}".format(int(v_node[0]), int(v_node[1]))
-                    if v_name in cur_map.n_name:
-                        cur_map.add_edge_vis_fov(u_name, v_name, float(v_node[2]), idx)
-
-    # IOs in node absolute coordinate file
-    file = open(data_node_pos, 'r')
-    lines = file.readlines()
-    for line in lines:
-        node, coors = coordinate_line_parser(line)
-        node_name = "{}_{}".format(int(node[0][0]), int(node[0][1]))
-        if node_name in cur_map.n_name:
-            cur_map.n_info[cur_map.n_name[node_name]] = (float(coors[0][0]), float(coors[0][2]))
+    # parse data in all visibility & probablity files
+    for f_index, data_view in enumerate(data_raw_view):
+        with open(data_view, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                # get target node and source nodes in four directions
+                u_node, v_list_N, v_list_S, v_list_W, v_list_E = visibility_fov_line_parser(line)
+                u_id = get_id_from_pos(int(u_node[0][0]), int(u_node[0][1]))
+                node_dict = {1: v_list_N, 2: v_list_S, 3: v_list_W, 4: v_list_E}
+                for d_index in node_dict:
+                    for v_node in node_dict[d_index]:
+                        v_id = get_id_from_pos(int(v_node[0]), int(v_node[1]))
+                        # attrs: direction, posture, probability, distance
+                        cur_map.add_edge_Gview_FOV(u_id, v_id, d_index, f_index, float(v_node[-1]), float(v_node[2]))
 
     # save to file
     if if_overwrite:
-        cur_map.save_graph_pickle(graph_move, graph_view, obj_pos)
+        cur_map.save_graph_pickle(graph_move, graph_view, obj_map, obj_pos)
+        # [TBD] might need to modify: API Deprecated since nx version 2.6.
     return cur_map
 
 
 def connection_line_parser(s):
-    # change 'null' action in the raw data with a placeholder for better iterating and action matching
-    s_acts = s.replace("null", "({},{})".format(INDEX_INVAL, INDEX_INVAL))
+    # replace 'null' action by a virtual node placeholder (0,0) in the raw data for better action iterating and matching
+    s_acts = s.replace("null", "(0,0)")
     s_nodes = re.findall(r"\((\d+),(\d+)\)", s_acts)
     # check if the list contains the source node and its neighbors in all four directions
-    assert len(s_nodes) == 5, f"[Parser][Error] Invalid node connections in line: \'{s_nodes}\'"
+    assert len(s_nodes) == 5, f"[GSMEnv][Parser] Invalid node connections in line: \'{s_nodes}\'"
     return s_nodes
+
+
+def coordinate_line_parser(s):
+    s_pos, s_coord = s.split("\t")
+    n_pos = re.findall(r"\((\d+),(\d+)\)", s_pos)
+    n_coord = re.findall(r"\((\d+\.?\d*),\s(\d+\.?\d*),\s(\d+\.?\d*)\)", s_coord)
+    return n_pos, n_coord
 
 
 def visibility_line_parser(s):
     s_s, s_t = s.split("\t")
-    s_id = re.findall(r"\((\d+),(\d+)\)", s_s)
-    d_dist = visual_prob_findall(s_t)
-    return s_id, d_dist
+    s_node = re.findall(r"\((\d+),(\d+)\)", s_s)
+    d_nodes = visual_prob_findall(s_t)
+    return s_node, d_nodes
 
 
 def visibility_fov_line_parser(s):
     s_nodes = re.split("\t", s)
-    s_id = re.findall(r"\((\d+),(\d+)\)", s_nodes[0])
+    s_node = re.findall(r"\((\d+),(\d+)\)", s_nodes[0])
     # generate lists for all looking directions
-    d1_list = visual_prob_findall(s_nodes[1])
-    d2_list = visual_prob_findall(s_nodes[2])
-    d3_list = visual_prob_findall(s_nodes[3])
-    d4_list = visual_prob_findall(s_nodes[4])
-    return s_id, d1_list, d2_list, d3_list, d4_list
+    d_list_N = visual_prob_findall(s_nodes[1])
+    d_list_S = visual_prob_findall(s_nodes[2])
+    d_list_W = visual_prob_findall(s_nodes[3])
+    d_list_E = visual_prob_findall(s_nodes[4])
+    return s_node, d_list_N, d_list_S, d_list_W, d_list_E
 
 
 # get a list of all adjacency nodes with 'dist' and 'prob' strings
@@ -142,20 +169,13 @@ def visual_prob_check_num(s_prob):
     return re.search(r"(\d)(\.\d*)?([eE][-](\d+))?", s_prob)
 
 
-# omit body parts check tokens
+# omit body parts tokens: ['tuple', 'prob']
 def visual_prob_elem_parser(s):
     elem_list = re.split(r';',s)
     e_list = []
     for elem in elem_list:
         e_list.append(re.split(r'\|\d\|\D*\|', elem))
     return e_list
-
-
-def coordinate_line_parser(s):
-    idx, coor = s.split("\t")
-    n_idx = re.findall(r"\((\d+),(\d+)\)", idx)
-    n_coor = re.findall(r"\((\d+\.?\d*),\s(\d+\.?\d*),\s(\d+\.?\d*)\)", coor)
-    return n_idx, n_coor
 
 
 def find_file_in_dir(dir_name: str, file_name: str) -> str:
@@ -173,54 +193,12 @@ def check_dir(dir_name: str) -> bool:
     return os.path.exists(dir_name)
 
 
-# logger for step runs
-def save_log_2_file(config, n_step, n_done, agents, prev_obs, actions, obs, rewards, dones=None):
-    # ori_stdout = sys.stdout
-    _log_path = os.path.join(config["root_path"], config["log_path"])
-    if not check_dir(_log_path):
-        os.makedirs(_log_path)
-    file_path = os.path.join(_log_path, "{}done_{}.txt".format(config["log_prefix"], n_done))
-    with open(file_path, 'a+') as f:
-        # sys.stdout = f
-        _buffer = "Step #{:2d} ".format(n_step)
-        for _idx in range(len(agents)):
-            _buffer += "| {} HP:{} node:{} dir:{} pos:{} ".format(agents[_idx][0], agents[_idx][3],
-                                                                  agents[_idx][1][0], agents[_idx][1][1],
-                                                                  agents[_idx][2])
-        _buffer += f"| Actions:{actions} | Step rewards:{rewards}"
-        if config["log_verbose"]:
-            _buffer += f" | Obs_before:{prev_obs} | Obs_after:{obs}"
-            if dones is not None:
-                _buffer += f" | done:{dones}"
-        print(_buffer, file=f)
-        # sys.stdout = ori_stdout
-    return True
-
-
-# overview of episode rewards
-def log_done_reward(config, n_done, rewards):
-    _log_path = os.path.join(config["root_path"], config["log_path"])
-    if not check_dir(_log_path):
-        os.makedirs(_log_path)
-    file_episode = os.path.join(_log_path, config["log_overview"])
-    with open(file_episode, 'a+') as f:
-        _episode = f"Episode #{n_done:2d} ends with episode_reward:{rewards}"
-        print(_episode, file=f)
-    file_step = os.path.join(_log_path, f"{config['log_prefix']}done_{n_done}.txt")
-    with open(file_step, 'a+') as f:
-        _step = f"Episode rewards:{rewards}"
-        print(_step, file=f)
-    return True
-
-
 def generate_parsed_data_files():
     # relative path to project root
     _env_path = "./"
     _map_lookup = ["Std"]
-
     for _map in _map_lookup:
-        generate_graph_files(env_path=_env_path, map_lookup=_map, route_lookup=_route_lookup,
-                             is_pickle_graph=True, if_overwrite=True)
+        generate_graph_files(env_path=_env_path, map_lookup=_map, if_overwrite=True)
 
 
 if __name__ == "__main__":
