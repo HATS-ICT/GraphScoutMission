@@ -130,4 +130,3 @@ dmypy.json
 
 # local folder
 graph_scout/envs/data/parsed/
-graph_scout/envs/data/archived/
