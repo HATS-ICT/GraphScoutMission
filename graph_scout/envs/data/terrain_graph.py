@@ -5,15 +5,15 @@ import pickle
 class MapInfo:
     # simulation terrain graphs with up to 4-way connected grid-like waypoints and FOV-based visibilities & damage probabilities
     def __init__(self):
-        self.g_move = nx.DiGraph(method="get_action")  # {node type: idx}, {node label: encoding}
-        self.g_view = nx.MultiDiGraph(method="get_distance")  # {node type: idx}, {edge label: distance & posture & probabilities}
-        self.n_table dict()  # {n_id: (row, col)} relative 2D coordinates
-        self.n_coord dict()  # {n_id: (X, Z)} absolute 3D coordinates for visualization
+        self.g_move = nx.DiGraph(method="get_action")  # {node: index, node_label: height, edge_label: direction}
+        self.g_view = nx.MultiDiGraph(method="get_distance")  # {node: index, edge_label: direction & posture & probabilities & distance}
+        self.n_table = dict()  # {n_id: (row, col)} relative 2D coordinates
+        self.n_coord = dict()  # {n_id: (X, Z)} absolute 3D coordinates for visualization
         self.counter = 0
 
     def add_node_init_list(self, list_n_id) -> bool:
-        if not self.counter:
-            return True
+        # if not self.counter:
+        #     return True
         # fast init without sanity checks
         self.g_move.add_nodes_from(list_n_id)
         self.g_view.add_nodes_from(list_n_id)
@@ -44,15 +44,14 @@ class MapInfo:
             raise ValueError("[GSMEnv][Graph] Invalid node index.")
         return True
 
-    def add_edge_Gview_FOV(self, u_id, v_id, attr_dir, attr_pos, attr_prob, attr_dist=0) -> bool:
+    def add_edge_Gview_FOV(self, u_id, v_id, attr_dir, attr_pos, attr_prob, attr_dist) -> bool:
         # check node existence first
         if u_id in self.n_table and v_id in self.n_table:
             # set the distance attribute to the first edge if there are parallel edges
             if self.g_view.has_edge(u_id, v_id):
                 self.g_view.add_edge(u_id, v_id, dir=attr_dir, posture=attr_pos, prob=attr_prob)
             else:
-                self.g_view.add_edge(u_node, v_node, dir=attr_dir, posture=attr_pos, prob=attr_prob)
-                self.g_view[u_id][v_id][0]['dist'] = attr_dist
+                self.g_view.add_edge(u_id, v_id, dir=attr_dir, posture=attr_pos, prob=attr_prob, dist=attr_dist)
             return False
         return True
 
@@ -62,8 +61,8 @@ class MapInfo:
         #     self.g_view.clear()
         self.g_move = nx.DiGraph(method="get_action")
         self.g_view = nx.MultiDiGraph(method="get_distance")
-        self.n_table dict()
-        self.n_abs_coor dict()
+        self.n_table = dict()
+        self.n_coord = dict()
         self.counter = 0
 
     def set_draw_attrs(self, n_id, coord):

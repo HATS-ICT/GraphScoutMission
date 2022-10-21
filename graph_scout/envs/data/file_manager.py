@@ -1,8 +1,10 @@
 import os
 import re
 
-from graph_scout.envs.data.terrain_graph import MapInfo
-import graph_scout.envs.data.file_lookup as fc
+# from graph_scout.envs.data.terrain_graph import MapInfo
+# import graph_scout.envs.data.file_lookup as fc
+from terrain_graph import MapInfo
+import file_lookup as fc
 
 def load_graph_files(env_path="./", map_lookup="Std"):
     assert check_dir(env_path), "[GSMEnv][File] Invalid path for loading env data: {}".format(env_path)
@@ -36,11 +38,11 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
     # check exists of parsed files [option: overwrite existing files if the flag turns on]
     graph_move, _move = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["d_connectivity"], map_id))
     graph_view, _view = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["d_visibility"], map_id))
-    obj_map, _map = = find_file_in_dir(path_data, "{}{}.pickle".format(fc.DATA_LOOKUP["d_mapping"], map_id))
+    obj_map, _map = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["d_mapping"], map_id))
     obj_pos, _pos = check_file_in_dir(path_obj, "{}{}.pickle".format(fc.DATA_LOOKUP["d_coordinates"], map_id))
 
     if if_overwrite:
-        if True in [_move, _view, ,_map, _pos]:
+        if True in [_move, _view, _map, _pos]:
             print("[GSMEnv][Info] Overwrite previous saved parsing data in \'{}\'".format(env_path))
         else:
             print("[GSMEnv][Info] Start parsing raw data. Parsed data will be saved in \'{}\'".format(env_path))
@@ -57,7 +59,8 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
     data_raw_view = [find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_visibility"][_file]) for _file in fc.RAW_DATA_LOOKUP["r_visibility"]]
 
     # preprocessing & utilities for raw data conventions
-    from graph_scout.envs.data.node_coor_mapping import dict_node_id_pos
+    # from graph_scout.envs.data.node_coor_mapping import dict_node_id_pos
+    from node_coor_mapping import dict_node_id_pos
     from copy import deepcopy
     dict_table = dict_node_id_pos
 
@@ -94,7 +97,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
         lines = file.readlines()
         for line in lines:
             s_pos, s_coord = coordinate_line_parser(line)
-            n_id = get_id_from_pos(int(s_pos[0]), int(s_pos[1]))
+            n_id = get_id_from_pos(int(s_pos[0][0]), int(s_pos[0][1]))
             if n_id in cur_map.n_table:
                 # store X & Z coordinates for ploting
                 cur_map.n_coord[n_id] = (float(s_coord[0][0]), float(s_coord[0][2]))
