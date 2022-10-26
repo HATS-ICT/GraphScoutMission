@@ -128,5 +128,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# local folder
+# local folders
 graph_scout/envs/data/parsed/
+graph_scout/envs/data/archived/
+graph_scout/envs/local/
+graph_scout/envs/dev/
+graph_scout/logs/
+graph_scout/debug/
+graph_scout/device/
