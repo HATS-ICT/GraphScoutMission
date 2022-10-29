@@ -6,3 +6,8 @@ register(
     max_episode_steps=100,
 )
 
+# register(
+#     id='graphScoutMission-v1',
+#     entry_point='graph_scout.envs.base:ScoutMissionExt',
+#     max_episode_steps=100,
+# )

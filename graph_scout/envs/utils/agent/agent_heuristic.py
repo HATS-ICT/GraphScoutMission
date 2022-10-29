@@ -15,12 +15,9 @@ class AgentHeur(GSMAgent):
         # interactive args
         self.target_agent = 0
         self.slow_mode = False
-        # {step_num} >= 1: agent moves on an edge at a speed slower than normal.
-        # ==> {N} mini-steps/segments (or {N-1} sub-waypoints)
-        self.slow_step = int(mini_steps) if mini_steps > 1 else 1
+        self.slow_step = mini_steps # int >= 1
         self._slow_count = self.slow_step
-        # {step_num} >= 1: agent visits the target for {N} steps to claim a success.
-        self.stay_step = int(wait_steps) if wait_steps > 1 else 1
+        self.stay_step = wait_steps # int >= 0
         self._stay_count = self.stay_step
 
     @property
@@ -30,11 +27,13 @@ class AgentHeur(GSMAgent):
     @route.setter
     def route(self, node_list):
         if node_list is None:
-            node_list = [super().at_node]
+            node_list = [self.at_node]
         self._route = node_list
         self._route_max = len(node_list) - 1
-        if self.index > self._route_max:
-            self.index = self._route_max
+        # if self.index > self._route_max:
+        #     self.index = self._route_max
+        self.index = 0
+        self.at_node = self._route[0]
 
     def change_route(self, node_list, index=0):
         self.index = index
@@ -51,6 +50,21 @@ class AgentHeur(GSMAgent):
         self.slow_mode = False
         self._slow_count = self.slow_step
         self._stay_count = self.stay_step
+
+    def update_mini_steps(self, num):
+        # {step_n} >= 1: agent moves on an edge at a speed slower than normal.
+        # ==> {N} mini-steps/segments (or {N-1} sub-waypoints)
+        mini_step_n = int(num)
+        self.slow_step = mini_step_n if mini_step_n > 1 else 1
+        self._slow_count = self.slow_step
+        return self.slow_step
+
+    def update_wait_steps(self, num):
+        # {step_n} >= 1: agent visits the target for {N} steps to claim a success.
+        wait_steps = int(num)
+        self.stay_step = wait_steps if wait_steps > 1 else 1
+        self._stay_count = self.stay_step
+        return self.stay_step
 
     # set moving speed alongwith the posture lookup token
     def change_speed_slow(self, posture=1):
@@ -89,9 +103,9 @@ class AgentHeur(GSMAgent):
             self.at_node = self._route[self.index]
             self.target_node = self._route[-1]
 
-    # fast accessing current & next nodes with no boundary checks: self.index < max
+    # fast accessing current & next node. boundary checks: self.index != max
     def get_source_target(self):
-        return self.at_node, self._route[self.index + 1]
+        return self.at_node, -1 if self.if_path_end() else self._route[self.index + 1]
 
     def if_path_end(self):
         return self.index == self._route_max

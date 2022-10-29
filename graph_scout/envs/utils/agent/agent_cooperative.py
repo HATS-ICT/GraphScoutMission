@@ -4,7 +4,7 @@ from multiagent_base import GSMAgent
 class AgentCoop(GSMAgent):
     def __init__(self, global_id=0, name="R0", team_id=0, node=0,
                 motion=0, direction=0, posture=0, health=100, _death=False,
-                 _learning=True, _observing=True):
+                _learning=True, _observing=True):
         super().__init__(global_id, name, team_id, node,
                         motion, direction, posture, health, _death)
         # ineractive args
