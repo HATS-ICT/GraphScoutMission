@@ -35,6 +35,9 @@ class GSMAgent:
     def get_acts(self):
         return [self.motion, self.direction, self.posture]
 
+    def get_geo_tuple(self):
+        return [self.at_node, self.direction, self.posture]
+
     # health value is greater or equal to 0
     def take_damage(self, num_deduction):
         if num_deduction < self.health:
