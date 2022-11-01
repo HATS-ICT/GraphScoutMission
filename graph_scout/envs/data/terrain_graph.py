@@ -96,19 +96,32 @@ class MapInfo:
     def get_Gview_edge_attr_dist(self, u_id, v_id):
         return self.g_view[u_id][v_id][0]["dist"]
 
-    def get_Gview_prob_by_dir_pos(self, u_id, v_id, u_dir, pos_u_v):
-        # check all parallel edges(u, v), return prob value if has_edge(dir, pos)
+    def get_edge_prob_by_dir_pos_Gview(self, u_id, v_id, u_dir, pos_u_v):
+        # check all parallel edges(u, v), return edge_id & prob if has_edge(dir, pos)
         edge_view = self.g_view[u_id][v_id]
         _edge_index = [True if (edge_view[_id]['dir'] == u_dir) and (edge_view[_id]['posture'] == pos_u_v) else False for _id in edge_view]
-        # return the prob value or -1 indicator
-        return edge_view[_edge_index.index(True)]["prob"] if sum(_edge_index) == 1 else -1
+        # return the prob value (-1 -> none indicator)
+        if sum(_edge_index):
+            _e = _edge_index.index(True)
+            return _e, edge_view[_e]["prob"]
+        return -1, 0
+
+    def get_all_adj_by_id_dir_pos_Gview(self, u_id, u_dir, pos_u_v):
+        # return all valid nodes
+        u_adj = self.g_view[u_id]
+        list_adj = {}
+        for _node in u_adj:
+            for _edge in u_adj[_node]:
+                if u_adj[_node][_edge]['dir'] == u_dir and u_adj[_node][_edge]['posture'] == pos_u_v:
+                    list_adj[_node] = _edge
+        return list_adj
 
     def get_all_action_Gmove(self, n_id):
         list_t_id = list(nx.neighbors(self.g_move, n_id))
         # get all valid action tokens from 'ACTION_LOOKUP' table
         return [self.get_Gmove_edge_attr(n_id, t_id) for t_id in list_t_id]
 
-    def get_all_state_Gmove(self, n_id):
+    def get_action_node_dict_Gmove(self, n_id):
         adj_id = list(nx.neighbors(self.g_move, n_id))
         # send the whole 1st order subgraph (current_index, list_of_neighbor_index, list_of_action_nums)
         dict_dir_target = dict()
