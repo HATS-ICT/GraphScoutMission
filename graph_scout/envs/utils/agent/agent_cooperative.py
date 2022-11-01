@@ -47,6 +47,6 @@ class AgentCoop(GSMAgent):
     def cause_damage(self, num_point):
         self.damage_total += num_point
 
-    # + minor interactions
+    # minor interactions (missing shots)
     def disturbing(self, num_point=1):
         self.disturb_total += num_point

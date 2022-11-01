@@ -32,7 +32,7 @@ class GSMAgent:
         self.direction = num_list[2]
         self.posture = num_list[3]
 
-    def get_acts(self):
+    def get_act_tuple(self):
         return [self.motion, self.direction, self.posture]
 
     def get_geo_tuple(self):

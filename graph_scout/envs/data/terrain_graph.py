@@ -34,14 +34,14 @@ class MapInfo:
         self.g_view.add_node(n_id, dict_attrs)
         return False
 
-    def add_edge_Gmove(self, u_id, v_id, attr_value) -> bool:
+    def add_edge_Gmove(self, u_id, v_id, attr_action) -> bool:
         # check node existence first
         if u_id in self.n_table and v_id in self.n_table:
             # attr value: action lookup indexing number
-            self.g_move.add_edge(u_id, v_id, action=attr_value)
+            self.g_move.add_edge(u_id, v_id, action=attr_action)
             return False
         else:
-            raise ValueError("[GSMEnv][Graph] Invalid node index.")
+            raise KeyError("[GSMEnv][Graph] Invalid node index.")
         return True
 
     def add_edge_Gview_FOV(self, u_id, v_id, attr_dir, attr_pos, attr_prob, attr_dist) -> bool:
@@ -51,8 +51,11 @@ class MapInfo:
             if self.g_view.has_edge(u_id, v_id):
                 self.g_view.add_edge(u_id, v_id, dir=attr_dir, posture=attr_pos, prob=attr_prob)
             else:
+                # only edge[u][v][0] has the distance attr
                 self.g_view.add_edge(u_id, v_id, dir=attr_dir, posture=attr_pos, prob=attr_prob, dist=attr_dist)
             return False
+        else:
+            raise KeyError("[GSMEnv][Graph] Invalid node index.")
         return True
 
     def reset(self):
@@ -66,11 +69,11 @@ class MapInfo:
         self.counter = 0
 
     def set_draw_attrs(self, n_id, coord):
-        # store 'pos' absolute coordinates attribute for drawing
+        # store absolute coordinates as attributes for drawing graphs
         if n_id in self.n_table:
             self.n_coord[n_id] = coord
         else:
-            raise ValueError("[GSMEnv][Graph] Invalid node index.")
+            raise KeyError("[GSMEnv][Graph] Invalid node index.")
         return False
 
     def get_graph_size(self):
@@ -80,25 +83,25 @@ class MapInfo:
         return self.counter, len(self.g_move), len(self.g_view), len(self.n_table), len(self.n_coord)
 
     def get_Gmove_edge_attr(self, u_id, v_id):
-        # no edge check for fast accessing
+        # no edge check for fast accessing: value -> action index
         return self.g_move[u_id][v_id]["action"]
 
-    def get_Gview_edge_attr(self, u_id, v_id, e_id):
-        # no valid edge check
-        return self.g_view[u_id][v_id][e_id]["dir"], self.g_view[u_id][v_id][e_id]["posture"], self.g_view[u_id][v_id][e_id]["prob"]
+    def get_Gview_edge_attr_dict(self, u_id, v_id, e_id):
+        # no edge sanity check: (node_s, node_t, edge_index) -> dict {all attrs}
+        return self.g_view[u_id][v_id][e_id]
 
     def get_Gview_edge_attr_prob(self, u_id, v_id, e_id):
-        # no valid edge check
         return self.g_view[u_id][v_id][e_id]["prob"]
 
-    def get_Gview_edge_attr_dir(self, u_id, v_id):
+    def get_Gview_edge_attr_dist(self, u_id, v_id):
         return self.g_view[u_id][v_id][0]["dist"]
 
-    def get_Gview_edge_attr_dir(self, u_id, v_id, u_dir):
-        # check all parallel edges(u, v), return the distance value (>0) if the looking direction is valid
-        dirs = [self.g_view[u_id][v_id][index]['dir'] for index in self.g_view[u_id][v_id]]
-        # return the distance value or -1 indicator
-        return self.g_view[u_id][v_id][u_dir]["dir"] if (u_dir in dirs) else -1
+    def get_Gview_prob_by_dir_pos(self, u_id, v_id, u_dir, pos_u_v):
+        # check all parallel edges(u, v), return prob value if has_edge(dir, pos)
+        edge_view = self.g_view[u_id][v_id]
+        _edge_index = [True if (edge_view[_id]['dir'] == u_dir) and (edge_view[_id]['posture'] == pos_u_v) else False for _id in edge_view]
+        # return the prob value or -1 indicator
+        return edge_view[_edge_index.index(True)]["prob"] if sum(_edge_index) == 1 else -1
 
     def get_all_action_Gmove(self, n_id):
         list_t_id = list(nx.neighbors(self.g_move, n_id))

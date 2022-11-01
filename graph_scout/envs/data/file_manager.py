@@ -1,10 +1,9 @@
 import os
 import re
 
-# from graph_scout.envs.data.terrain_graph import MapInfo
-# import graph_scout.envs.data.file_lookup as fc
-from terrain_graph import MapInfo
-import file_lookup as fc
+from graph_scout.envs.data.terrain_graph import MapInfo
+import graph_scout.envs.data.file_lookup as fc
+
 
 def load_graph_files(env_path="./", map_lookup="Std"):
     assert check_dir(env_path), "[GSMEnv][File] Invalid path for loading env data: {}".format(env_path)
@@ -49,8 +48,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
     else:
         print("[GSMEnv][Info] Start parsing raw data. Objects will *NOT* be saved or overwrited. <online mode>")
 
-    # check existance of raw data files
-
+    ### check existance of raw data files
     # check node connectivity file
     data_raw_move = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_connectivity"])
     # check node absolute coordinate file
@@ -65,9 +63,9 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
     dict_table = dict_node_id_pos
 
     list_n_id = list(dict_table.keys())
-    list_n_pos = list(dict_table.values())
-    def get_id_from_pos(_row, _col):
-        return list_n_id[list_n_pos.index((_row, _col))]
+    list_n_loc = list(dict_table.values())
+    def get_id_from_2D_coord(_row, _col):
+        return list_n_id[list_n_loc.index((_row, _col))]
 
     # generate a graph container instance
     cur_map = MapInfo()
@@ -84,7 +82,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
                 # check placeholder (0,0) for invalid 'null' actions [skip and continue]
                 if row == 0 and col == 0:  
                     continue
-                n_id = get_id_from_pos(row, col)
+                n_id = get_id_from_2D_coord(row, col)
                 if index:
                     # directed edge source->target with the attribute for action lookup 'NSWE->1234'
                     cur_map.add_edge_Gmove(u_id, n_id, index)
@@ -97,7 +95,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
         lines = file.readlines()
         for line in lines:
             s_pos, s_coord = coordinate_line_parser(line)
-            n_id = get_id_from_pos(int(s_pos[0][0]), int(s_pos[0][1]))
+            n_id = get_id_from_2D_coord(int(s_pos[0][0]), int(s_pos[0][1]))
             if n_id in cur_map.n_table:
                 # store X & Z coordinates for ploting
                 cur_map.n_coord[n_id] = (float(s_coord[0][0]), float(s_coord[0][2]))
@@ -113,11 +111,11 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
             for line in lines:
                 # get target node and source nodes in four directions
                 u_node, v_list_N, v_list_S, v_list_W, v_list_E = visibility_fov_line_parser(line)
-                u_id = get_id_from_pos(int(u_node[0][0]), int(u_node[0][1]))
+                u_id = get_id_from_2D_coord(int(u_node[0][0]), int(u_node[0][1]))
                 node_dict = {1: v_list_N, 2: v_list_S, 3: v_list_W, 4: v_list_E}
                 for d_index in node_dict:
                     for v_node in node_dict[d_index]:
-                        v_id = get_id_from_pos(int(v_node[0]), int(v_node[1]))
+                        v_id = get_id_from_2D_coord(int(v_node[0]), int(v_node[1]))
                         # attrs: direction, posture, probability, distance
                         cur_map.add_edge_Gview_FOV(u_id, v_id, d_index, f_index, float(v_node[-1]), float(v_node[2]))
 

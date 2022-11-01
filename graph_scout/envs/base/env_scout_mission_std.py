@@ -1,7 +1,6 @@
-import numpy as np
 import gym
-
-from graph_scout.envs.utils.config.default_setups import init_setups as env_setup
+import numpy as np
+from random import randrange, uniform
 
 
 class ScoutMissionStd(gym.Env):
@@ -12,6 +11,9 @@ class ScoutMissionStd(gym.Env):
         self.states = None
         self.map = None
 
+        self.step_counter = 0
+        self.done_counter = 0
+
         #1 init environment config arguments
         #1.1 init all local/default configs and parse additional arguments
         self._init_env_config(**kwargs)
@@ -20,13 +22,10 @@ class ScoutMissionStd(gym.Env):
         #1.3 get agent & state instances
         self._init_agent_state()
         
-        #2 init gym env spaces
+        #2 init Multi-branched action gym space & flattened observation gym space
         from gym import spaces
         self.action_space = [[spaces.MultiDiscrete(self.acts.shape())]] * self.states.num
-        self.observation_space = [[spaces.Box(low=0, high=1, shape=(self.states.shape,), dtype=np.float64)]] * self.states.num
-
-        self.step_counter = 0
-        self.done_counter = 0
+        self.observation_space = [[spaces.Box(low=0.0, high=1.0, shape=(self.states.shape,), dtype=np.float64)]] * self.states.num
 
     def reset(self, force=False):
         self.step_counter = 0
@@ -158,7 +157,7 @@ class ScoutMissionStd(gym.Env):
                     R_overlay[_t] = True
 
         # update states for all agents in team red
-        look_dir_shape = len(env_setup.ACT_LOOK_DIR)
+        look_dir_shape = len(self.configs["ACT_LOOK_DIR"])
         _obs_self_dir = self.obs_token["obs_dir"]
         _state_R_dir = []
         # get looking direction encodings for all red agents
@@ -220,32 +219,32 @@ class ScoutMissionStd(gym.Env):
         return R_see_B, R_engage_B, B_see_R, B_engage_R, R_overlay
 
     # update health points for all agents
-    def agent_interaction(self, R_engage_B, B_engage_R):
+    def agent_interaction(self):
         # update health and damage points for all agents
-        _step_damage = env_setup.INTERACT_LOOKUP["engage_behavior"]["damage"]
-        for _b in range(self.n_blue):
-            for _r in range(self.n_red):
-                if R_engage_B[_r, _b]:
-                    self.team_red[_r].damage_add(_step_damage)
-                    self.team_blue[_b].take_damage(_step_damage)
-                if B_engage_R[_b, _r]:
-                    self.team_red[_r].take_damage(_step_damage)
+        _step_damage = self.configs["engage_behavior"]["damage"]
+        for _b in self.agents.ids_B:
+            for _r in self.agents.ids_R:
+                if self.mat_engage[_r, _b]:
+                    self.agents.gid[_r].cause_damage(_step_damage)
+                    self.agents.gid[_b].take_damage(_step_damage)
+                if self.mat_engage[_b, _r]:
+                    self.agents.gid[_r].take_damage(_step_damage)
             # update end time for blue agents
-            if self.team_blue[_b].get_end_step() > 0:
+            if self.agents.gid[_b].get_end_step() > 0:
                 continue
-            _damage_taken_blue = self.configs["init_health_blue"] - self.team_blue[_b].get_health()
+            _damage_taken_blue = self.configs["init_health_blue"] - self.agents.gid[_b].health
             if _damage_taken_blue >= self.configs["threshold_damage_2_blue"]:
-                self.team_blue[_b].set_end_step(self.step_counter)
+                self.agents.gid[_b].set_end_step(self.step_counter)
 
-    def _step_rewards(self, penalties, R_engage_B, B_engage_R, R_overlay):
-        rewards = penalties
+    def _step_rewards(self, rews, mini_rews):
+        rewards = rews
         if self.rewards["step"]["reward_step_on"] is False:
             return rewards
-        for agent_r in range(self.n_red):
-            rewards[agent_r] += get_step_overlay(R_overlay[agent_r], **self.rewards["step"])
+        for _a in self.agents.ids_ob:
+            rewards[_a] += get_step_overlay(mini_rews[_a], **self.rewards["step"])
             for agent_b in range(self.n_blue):
-                rewards[agent_r] += get_step_engage(r_engages_b=R_engage_B[agent_r, agent_b],
-                                                    b_engages_r=B_engage_R[agent_b, agent_r],
+                rewards[agent_r] += get_step_engage(r_engages_b=self.mat_engage[agent_r, agent_b],
+                                                    b_engages_r=self.mat_engage[agent_b, agent_r],
                                                     team_switch=False, **self.rewards["step"])
         return rewards
 
@@ -288,7 +287,7 @@ class ScoutMissionStd(gym.Env):
         # death == done for each observing agent (early termination)
         return [self.agents.gid[_id].death for _id in self.agents.ids_ob]
 
-    def is_in_sight(self, source_node, target_node, source_dir):
+    def _is_in_sight(self, source_node, target_node, source_dir):
         """ field of view check
             if there is an edge in the visibility FOV graph;
                 if so, check if it is inside the sight range
@@ -297,9 +296,9 @@ class ScoutMissionStd(gym.Env):
         if source_node == target_node:
             return True
         if self.map.g_view.has_edge(source_node, target_node):
-            _distance = self.map.get_edge_attr_view(source_node, target_node, source_dir)
+            _distance = self.map.get_Gview_edge_attr_dist(source_node, target_node, source_dir)
             # -1 indicates there is no visibility edge in the 's_dir' direction
-            _range = env_setup.INTERACT_LOOKUP["sight_range"]
+            _range = self.configs["sight_range"]
             if _distance == -1:
                 return False
             if _range < 0 or _distance < _range:
@@ -308,24 +307,26 @@ class ScoutMissionStd(gym.Env):
 
     # load configs and update local defaults
     def _init_env_config(self, **kwargs):
+        from graph_scout.envs.utils.config import default_configs as env_cfg
         """ set default env config values if not specified in outer configs """
         from copy import deepcopy
-        self.configs = deepcopy(env_setup.INIT_CONFIGS)
-        self.rewards = deepcopy(env_setup.INIT_REWARDS)
+        self.configs = deepcopy(env_cfg.INIT_CONFIGS)
+        self.rewards = deepcopy(env_cfg.INIT_REWARDS)
         # fast access for frequently visited args
         self.n_red = self.configs["num_red"]
         self.n_blue = self.configs["num_blue"]
         self.max_step = self.configs["max_step"]
+        self.mini_steps = self.configs["mini_n_step"]
 
-        _config_local_args = env_setup.INIT_CONFIGS_LOCAL
+        _config_local_args = env_cfg.INIT_CONFIGS_LOCAL
         _config_args = _config_local_args + list(self.configs.keys())
         _reward_step_args = list(self.rewards["step"].keys())
         _reward_done_args = list(self.rewards["episode"].keys())
-        _log_args = list(env_setup.INIT_LOGS.keys())
+        _log_args = list(env_cfg.INIT_LOGS.keys())
 
         # loading outer args and overwrite env configs
         for key, value in kwargs.items():
-            # assert env_setup.check_args_value(key, value)
+            # assert env_cfg.check_args_value(key, value)
             if key in _config_args:
                 self.configs[key] = value
             elif key in _obs_shape_args:
@@ -349,16 +350,16 @@ class ScoutMissionStd(gym.Env):
                 # grant blue agents a higher damage threshold when more reds on the map
                 self.configs[key] = self.configs["damage_maximum"] * self.n_red
             elif key == "act_masked":
-                self.configs[key] = env_setup.ACT_MASKED["mask_on"]
+                self.configs[key] = env_cfg.ACT_MASKED["mask_on"]
         # setup penalty for invalid action in unmasked conditions
         self.invalid_masked = self.configs["act_masked"]
         if self.invalid_masked is False:
-            self.configs["penalty_invalid"] = env_setup.ACT_MASKED["unmasked_invalid_action_penalty"]
+            self.configs["penalty_invalid"] = env_cfg.ACT_MASKED["unmasked_invalid_action_penalty"]
 
         # check init_red init configs, must have attribute "pos":[str/tuple] for resetting agents
-        self.configs["init_red"] = env_setup.check_agent_init("red", self.n_red, self.configs["init_red"])
+        self.configs["init_red"] = env_cfg.check_agent_init("red", self.n_red, self.configs["init_red"])
         # check init_blue, must have attribute "route":[str] used in loading graph files. default: '0'
-        self.configs["init_blue"] = env_setup.check_agent_init("blue", self.n_blue, self.configs["init_blue"])
+        self.configs["init_blue"] = env_cfg.check_agent_init("blue", self.n_blue, self.configs["init_blue"])
         # get all unique routes. (blue agents might share patrol route)
         self.configs["route_lookup"] = list(set(_blue["route"] for _blue in self.configs["init_blue"]))
 
@@ -370,7 +371,7 @@ class ScoutMissionStd(gym.Env):
                 self.logs["root_path"] = self.configs["env_path"]
                 for item in _log_args[1:]:
                     if item not in self.logs:
-                        self.logs[item] = env_setup.INIT_LOGS[item]
+                        self.logs[item] = env_cfg.INIT_LOGS[item]
         return True
 
     # load terrain graphs. [*]executable after calling self._init_env_config()
@@ -399,6 +400,7 @@ class ScoutMissionStd(gym.Env):
 
     def _engage_step_reset(self):
         self.mat_engage = np.zeros((self.agents.n_all, self.agents.n_all), dtyp=bool)
+        return [0] * self.states.num
 
     def _log_step_states(self):
         return self.states.dump_dict() if self.logger else []
@@ -435,7 +437,7 @@ class AgentManager():
     def _load_init_configs(self, n_red, n_blue, **agent_config):
         g_id = 0
         for _d in agent_config:
-            # dict key: agent name (i.e. red_0, blue_1)
+            # dict key: agent name (i.e. "red_0", "blue_1")
             _name = _d
             # dict values for each agent
             _team = agent_config[_d["team_id"]]
