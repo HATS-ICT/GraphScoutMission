@@ -8,8 +8,11 @@ class AgentCoop(GSMAgent):
         super().__init__(global_id, name, team_id, node,
                         motion, direction, posture, health, _death)
         # ineractive args
-        self.damage_total = 0
-        self.disturb_total = 0
+        self.engaged_total = 0
+        # step args for mini-steps sum
+        self.dmg_step_taken = 0
+        self.dmg_step_given = 0
+        self.engaged_step = 0
         # RL control args
         self.is_learning = _learning
         self.is_observing = _observing
@@ -38,15 +41,26 @@ class AgentCoop(GSMAgent):
 
     def reset(self, list_states, health=100, _death=False, _learning=True, _observing=True):
         super().reset(list_states, health, _death)
-        self.damage_total = 0
-        self.disturb_total = 0
+        self.engaged_total = 0
         self.is_learning = _learning
         self.is_observing = _observing
+        self.step_reset_dmg()
+
+    def step_reset(self):
+        self.dmg_step_taken = 0
+        self.dmg_step_given = 0
+        self.engaged_step = 0
 
     # major engagements only
-    def cause_damage(self, num_point):
-        self.damage_total += num_point
+    def damage_taken(self, num_point):
+        super().damage_taken(num_point)
+        self.dmg_step_taken += num_point
+
+    def damage_given(self, num_point):
+        super().damage_given(num_point)
+        self.dmg_step_given += num_point
 
     # minor interactions (missing shots)
-    def disturbing(self, num_point=1):
-        self.disturb_total += num_point
+    def disturbing(self, num_count=1):
+        self.engaged_total += num_count
+        self.engaged_step += num_count

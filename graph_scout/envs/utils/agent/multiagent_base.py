@@ -12,6 +12,7 @@ class GSMAgent:
         self.direction = direction
         self.posture = posture
         # interactive args
+        self.damage = 0
         self.health = health
         self.death = _death
 
@@ -25,12 +26,17 @@ class GSMAgent:
             raise TypeError("[GSMEnv][Agent] value must be a bool")
         self._death = value
     
-    # fast update without verifying values
+    # fast updating without verifying values
     def set_states(self, num_list):
         self.at_node = num_list[0]
         self.motion = num_list[1]
         self.direction = num_list[2]
         self.posture = num_list[3]
+
+    def set_acts(self, _move, _dir, _pos):
+        self.motion = _move
+        self.direction = _dir
+        self.posture = _pos
 
     def get_act_tuple(self):
         return [self.motion, self.direction, self.posture]
@@ -39,14 +45,18 @@ class GSMAgent:
         return [self.at_node, self.direction, self.posture]
 
     # health value is greater or equal to 0
-    def take_damage(self, num_deduction):
+    def damage_taken(self, num_deduction):
         if num_deduction < self.health:
             self.health -= num_deduction
         else:
             self.health = 0
             self.death = True
 
+    def damage_given(self, num_point):
+        self.damage += num_point
+
     def reset(self, list_states, health=100, _death=False):
         self.set_states(list_states)
+        self.damage = 0
         self.health = health
         self.death = _death
