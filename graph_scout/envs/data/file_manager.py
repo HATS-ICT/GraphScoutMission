@@ -53,7 +53,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
     data_raw_move = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_connectivity"])
     # check node absolute coordinate file
     data_raw_coor = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_coordinates"])
-    # check visibility & probablity files
+    # check visibility & probability files
     data_raw_view = [find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_visibility"][_file]) for _file in fc.RAW_DATA_LOOKUP["r_visibility"]]
 
     # preprocessing & utilities for raw data conventions
@@ -97,14 +97,14 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
             s_pos, s_coord = coordinate_line_parser(line)
             n_id = get_id_from_2D_coord(int(s_pos[0][0]), int(s_pos[0][1]))
             if n_id in cur_map.n_table:
-                # store X & Z coordinates for ploting
+                # store X & Z coordinates for plotting
                 cur_map.n_coord[n_id] = (float(s_coord[0][0]), float(s_coord[0][2]))
                 # store elevation info for interacting calculations
                 cur_map.g_move.nodes[n_id]["height"] = float(s_coord[0][1])
             else:
                 raise ValueError("[GSMEnv][Data] Invalid node coordinates.")
 
-    # parse data in all visibility & probablity files
+    # parse data in all visibility & probability files
     for f_index, data_view in enumerate(data_raw_view):
         with open(data_view, 'r') as file:
             lines = file.readlines()
@@ -165,14 +165,14 @@ def visual_prob_findall(s):
     return re.findall(r"\((\d+),(\d+),(\d+\.?\d*)\)\|(\d)\|\D*\|([0-9.eE\-]+);", s)
 
 
-# verify probablity values
+# verify probability values
 def visual_prob_check_num(s_prob):
     return re.search(r"(\d)(\.\d*)?([eE][-](\d+))?", s_prob)
 
 
 # omit body parts tokens: ['tuple', 'prob']
 def visual_prob_elem_parser(s):
-    elem_list = re.split(r';',s)
+    elem_list = re.split(r';', s)
     e_list = []
     for elem in elem_list:
         e_list.append(re.split(r'\|\d\|\D*\|', elem))

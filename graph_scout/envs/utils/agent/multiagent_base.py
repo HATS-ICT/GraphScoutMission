@@ -1,6 +1,6 @@
 class GSMAgent:
     def __init__(self, global_id=0, name="A0", team_id=0, node=0,
-                motion=0, direction=0, posture=0, health=100, _death=False):
+                 motion=0, direction=0, posture=0, health=100, _death=False):
         # basic info
         self.id = global_id
         self.name = name

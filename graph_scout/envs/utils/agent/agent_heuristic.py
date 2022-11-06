@@ -3,10 +3,10 @@ from multiagent_base import GSMAgent
 
 class AgentHeur(GSMAgent):
     def __init__(self, global_id=1, name="B0", team_id=1, node=0,
-                motion=-1, direction=0, posture=0, health=100, _death=False,
-                path=None, index=0, slow_level=4, wait_steps=1):
+                 motion=-1, direction=0, posture=0, health=100, _death=False,
+                 path=None, index=0, slow_level=4, wait_steps=1):
         super().__init__(global_id, name, team_id, node,
-                        motion, direction, posture, health, _death)
+                         motion, direction, posture, health, _death)
         # pre-designed route and the pointer for current location
         self.index = index
         self.route = path
@@ -15,9 +15,9 @@ class AgentHeur(GSMAgent):
         # interactive args
         self.target_agent = -1
         self.slow_mode = False
-        self.slow_step = slow_level # int >= 1
+        self.slow_step = slow_level  # int >= 1
         self._slow_count = self.slow_step
-        self.stay_step = wait_steps # int >= 0
+        self.stay_step = wait_steps  # int >= 0
         self._stay_count = self.stay_step
 
     @property
@@ -41,7 +41,7 @@ class AgentHeur(GSMAgent):
         if self.at_node != self.route[0]:
             raise ValueError("[GSMEnv][Agent] route source node does not match.")
 
-    def reset(self, list_states, path, index=0, health=100, _death=False):
+    def reset(self, list_states, health=100, _death=False, path=None, index=0):
         super().reset(list_states, health, _death)
         self.index = index
         self.route = path
@@ -66,7 +66,7 @@ class AgentHeur(GSMAgent):
         self._stay_count = self.stay_step
         return self.stay_step
 
-    # set moving speed alongwith the posture lookup token
+    # set moving speed along with the posture lookup token
     def change_speed_slow(self, posture=1):
         self.slow_mode = True
         self.posture = posture
@@ -112,8 +112,6 @@ class AgentHeur(GSMAgent):
             self._slow_count = self.slow_step
             self.slow_mode = False
             return next_node
-
-
 
     def if_at_main_nodes(self) -> bool:
         return self._slow_count == self.slow_step

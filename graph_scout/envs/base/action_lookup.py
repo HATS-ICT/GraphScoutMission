@@ -1,5 +1,7 @@
 """ global arguments: lookup table for movements and directions """
-class ActionBranched():
+
+
+class ActionBranched:
     def __init__(self, is_4_dirs=True):
         # lookup dicts
         self.move = MOVE_LOOKUP
@@ -33,9 +35,9 @@ TURN_4_LOOKUP = {
 
 # turn actions are conditioned on the current looking dir (after moving)
 TURN_3_LOOKUP = {
-    0: {1: 1, 2: 2, 3: 3, 4: 4}, # "NOOP",
-    1: {1: 3, 2: 4, 3: 2, 4: 1}, # "TURN_LEFT_90" dir after turning left for 90 degree,
-    2: {1: 4, 2: 3, 3: 1, 4: 2}, # "TURN_RIGHT_90" dir after turning right for 90 degree,
+    0: {1: 1, 2: 2, 3: 3, 4: 4},  # "NOOP",
+    1: {1: 3, 2: 4, 3: 2, 4: 1},  # "TURN_LEFT_90" dir after turning left for 90 degree,
+    2: {1: 4, 2: 3, 3: 1, 4: 2},  # "TURN_RIGHT_90" dir after turning right for 90 degree,
 }
 
 # posture

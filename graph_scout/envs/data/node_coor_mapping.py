@@ -1,6 +1,6 @@
 # manually annotated waypoint ordering <1~20:South hill region; 65~75:North ridge line>
 
-dict_node_id_pos={
+dict_node_id_pos = {
 1:(6,3),
 2:(6,4),
 3:(18,1),

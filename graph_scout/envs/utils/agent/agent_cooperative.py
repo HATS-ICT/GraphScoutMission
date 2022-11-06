@@ -3,11 +3,11 @@ from multiagent_base import GSMAgent
 
 class AgentCoop(GSMAgent):
     def __init__(self, global_id=0, name="R0", team_id=0, node=0,
-                motion=0, direction=0, posture=0, health=100, _death=False,
-                _learning=True, _observing=True):
+                 motion=0, direction=0, posture=0, health=100, _death=False,
+                 _learning=True, _observing=True):
         super().__init__(global_id, name, team_id, node,
-                        motion, direction, posture, health, _death)
-        # ineractive args
+                         motion, direction, posture, health, _death)
+        # interactive args
         self.engaged_total = 0
         # step args for mini-steps sum
         self.dmg_step_taken = 0
@@ -17,7 +17,7 @@ class AgentCoop(GSMAgent):
         self.is_learning = _learning
         self.is_observing = _observing
 
-    # A binary token for active learning or forzen status
+    # A binary token for active learning or frozen status
     @property
     def is_learning(self):
         return self._learning
@@ -44,7 +44,7 @@ class AgentCoop(GSMAgent):
         self.engaged_total = 0
         self.is_learning = _learning
         self.is_observing = _observing
-        self.step_reset_dmg()
+        self.step_reset()
 
     def step_reset(self):
         self.dmg_step_taken = 0

@@ -97,7 +97,7 @@ class MapInfo:
         return self.g_view[u_id][v_id][0]["dist"]
 
     def get_edge_prob_by_dir_pos_Gview(self, u_id, v_id, u_dir, pos_u_v):
-        # check all parallel edges(u, v), return edge_id & prob if has_edge(dir, pos)
+        # check all parallel edges(u, v), return edge_id & prob if it has_edge(dir, pos)
         edge_view = self.g_view[u_id][v_id]
         _edge_index = [True if (edge_view[_id]['dir'] == u_dir) and (edge_view[_id]['posture'] == pos_u_v) else False for _id in edge_view]
         # return the prob value (-1 -> none indicator)
