@@ -495,7 +495,8 @@ class ScoutMissionStd(gym.Env):
 
     # initialize all agents. [*] executable after calling self._init_env_config()
     def _init_agent_state(self):
-        self.agents = AgentManager(self.n_red, self.n_blue, **self.configs["agents_init"])
+        self.agents = AgentManager(self.n_red, self.n_blue, self.configs["health_red"], self.configs["health_blue"],
+                                   **self.configs["agents_init"])
         _id, _name, _team = self.agents.get_observing_agent_info()
         # <default obs> all agents have identical observation shape: (teammate slot + opposite slot)
         _obs_shape = self.map.get_graph_size()
