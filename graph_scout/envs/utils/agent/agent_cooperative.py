@@ -1,4 +1,4 @@
-from multiagent_base import GSMAgent
+from graph_scout.envs.utils.agent.multiagent_base import GSMAgent
 
 
 class AgentCoop(GSMAgent):

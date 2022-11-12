@@ -46,15 +46,17 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
         else:
             print("[GSMEnv][Info] Start parsing raw data. Parsed data will be saved in \'{}\'".format(env_path))
     else:
-        print("[GSMEnv][Info] Start parsing raw data. Objects will *NOT* be saved or overwrited. <online mode>")
+        print("[GSMEnv][Info] Start parsing raw data. Will NOT save or overwrite files. <online mode>")
 
-    ### check existance of raw data files
+    # check existence of raw data files
+
     # check node connectivity file
     data_raw_move = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_connectivity"])
     # check node absolute coordinate file
     data_raw_coor = find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_coordinates"])
     # check visibility & probability files
-    data_raw_view = [find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_visibility"][_file]) for _file in fc.RAW_DATA_LOOKUP["r_visibility"]]
+    data_raw_view = [find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_visibility"][_file]) for _file in
+                     fc.RAW_DATA_LOOKUP["r_visibility"]]
 
     # preprocessing & utilities for raw data conventions
     # from graph_scout.envs.data.node_coor_mapping import dict_node_id_pos
@@ -64,6 +66,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
 
     list_n_id = list(dict_table.keys())
     list_n_loc = list(dict_table.values())
+
     def get_id_from_2D_coord(_row, _col):
         return list_n_id[list_n_loc.index((_row, _col))]
 
@@ -80,7 +83,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
             for index, node in enumerate(list_pos):
                 row, col = int(node[0]), int(node[1])
                 # check placeholder (0,0) for invalid 'null' actions [skip and continue]
-                if row == 0 and col == 0:  
+                if row == 0 and col == 0:
                     continue
                 n_id = get_id_from_2D_coord(row, col)
                 if index:
@@ -167,7 +170,7 @@ def visual_prob_findall(s):
 
 # verify probability values
 def visual_prob_check_num(s_prob):
-    return re.search(r"(\d)(\.\d*)?([eE][-](\d+))?", s_prob)
+    return re.search(r"(\d)(\.\d*)?([eE]-?(\d+))?", s_prob)
 
 
 # omit body parts tokens: ['tuple', 'prob']

@@ -1,4 +1,4 @@
-from multiagent_base import GSMAgent
+from graph_scout.envs.utils.agent.multiagent_base import GSMAgent
 
 
 class AgentHeur(GSMAgent):
@@ -10,10 +10,13 @@ class AgentHeur(GSMAgent):
         # pre-designed route and the pointer for current location
         self.index = index
         self.route = path
-        self.target_node = 0
+        self.final_node = 0
         self.init_source_target()
         # interactive args
+        self.target_branch = 0
         self.target_agent = -1
+        self.target_zone = 0
+        # speed control
         self.slow_mode = False
         self.slow_step = slow_level  # int >= 1
         self._slow_count = self.slow_step
@@ -44,9 +47,11 @@ class AgentHeur(GSMAgent):
     def reset(self, list_states, health=100, _death=False, path=None, index=0):
         super().reset(list_states, health, _death)
         self.index = index
-        self.route = path
+        self.route = [0] if path is None else path
         self.init_source_target()
+        self.target_branch = 0
         self.target_agent = -1
+        self.target_zone = 0
         self.slow_mode = False
         self._slow_count = self.slow_step
         self._stay_count = self.stay_step
@@ -73,7 +78,6 @@ class AgentHeur(GSMAgent):
 
     def change_speed_fast(self, posture=0):
         self.slow_mode = False
-        self._slow_count = self.slow_step
         self.posture = posture
 
     # move to the next node in the designated path
@@ -90,9 +94,9 @@ class AgentHeur(GSMAgent):
             self._slow_count -= 1
             return True
         else:
-            self.move_en_route()
             self._slow_count = self.slow_step
-            self.slow_mode = False
+            self.change_speed_fast()
+            self.move_en_route()
             return False
 
     # sub-steps fake MOVE -> need to update 'at_node' later
@@ -108,10 +112,8 @@ class AgentHeur(GSMAgent):
             self._slow_count -= 1
             return self.at_node
         else:
-            next_node = self.move_en_route_prep()
             self._slow_count = self.slow_step
-            self.slow_mode = False
-            return next_node
+            return self.move_en_route_prep()
 
     def if_at_main_nodes(self) -> bool:
         return self._slow_count == self.slow_step
@@ -120,7 +122,7 @@ class AgentHeur(GSMAgent):
     def init_source_target(self):
         if self._route_max:
             self.at_node = self._route[self.index]
-            self.target_node = self._route[-1]
+            self.final_node = self._route[-1]
 
     # fast accessing current & next node. boundary checks: self.index != max
     def get_node_now_and_next(self):
@@ -132,7 +134,7 @@ class AgentHeur(GSMAgent):
     # check if the agent has staying at the target node for enough steps
     def done_scout(self):
         if self._stay_count:
-            if self.target_node == self.at_node:
+            if self.final_node == self.at_node:
                 self._stay_count -= 1
             return False
         return True

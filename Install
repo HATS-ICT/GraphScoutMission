@@ -1,1 +1,2 @@
 pip install -e .
+python graph_scout/envs/data/file_manager.py

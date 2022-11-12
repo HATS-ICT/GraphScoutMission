@@ -14,6 +14,7 @@ class GSMAgent:
         # interactive args
         self.damage = 0
         self.health = health
+        self.health_max = health
         self.death = _death
 
     @property
@@ -55,8 +56,8 @@ class GSMAgent:
     def damage_given(self, num_point):
         self.damage += num_point
 
-    def reset(self, list_states, health=100, _death=False):
+    def reset(self, list_states, health=0, _death=False):
         self.set_states(list_states)
         self.damage = 0
-        self.health = health
+        self.health = health if health else self.health_max
         self.death = _death

@@ -3,17 +3,22 @@ import pickle
 
 
 class MapInfo:
-    # simulation terrain graphs with up to 4-way connected grid-like waypoints and FOV-based visibilities & damage probabilities
+    # terrain graphs with up to 4-way connected grid-like waypoints + FOV-based visibilities & damage probabilities
     def __init__(self):
-        self.g_move = nx.DiGraph(method="get_action")  # {node: index, node_label: height, edge_label: direction}
-        self.g_view = nx.MultiDiGraph(method="get_distance")  # {node: index, edge_label: direction & posture & probabilities & distance}
-        self.n_table = dict()  # {n_id: (row, col)} relative 2D coordinates
-        self.n_coord = dict()  # {n_id: (X, Z)} absolute 3D coordinates for visualization
+        # {node: index_id, node_label: height, edge_label: direction}
+        self.g_move = nx.DiGraph(method="get_action")
+        # {node: index_id, edge_labels: (distance), direction, posture & probabilities}
+        self.g_view = nx.MultiDiGraph(method="get_distance")
+        # {n_id: (row, col)} relative 2D coordinates
+        self.n_table = dict()
+        # {n_id: (X, Z)} absolute 3D coordinates for visualization
+        self.n_coord = dict()
         self.counter = 0
 
     def add_node_init_list(self, list_n_id) -> bool:
         # if not self.counter:
         #     return True
+        
         # fast init without sanity checks
         self.g_move.add_nodes_from(list_n_id)
         self.g_view.add_nodes_from(list_n_id)
@@ -24,14 +29,14 @@ class MapInfo:
         # add node to action graph with attrs
         if n_id in self.n_table:
             return True
-        self.g_move.add_node(n_id, dict_attrs)
+        self.g_move.add_node(n_id, **dict_attrs)
         return False
 
     def add_node_Gview_single(self, n_id, **dict_attrs) -> bool:
         # add node to visual graph with attrs
         if n_id in self.n_table:
             return True
-        self.g_view.add_node(n_id, dict_attrs)
+        self.g_view.add_node(n_id, **dict_attrs)
         return False
 
     def add_edge_Gmove(self, u_id, v_id, attr_action) -> bool:
@@ -42,7 +47,7 @@ class MapInfo:
             return False
         else:
             raise KeyError("[GSMEnv][Graph] Invalid node index.")
-        return True
+            # return True
 
     def add_edge_Gview_FOV(self, u_id, v_id, attr_dir, attr_pos, attr_prob, attr_dist) -> bool:
         # check node existence first
@@ -56,7 +61,7 @@ class MapInfo:
             return False
         else:
             raise KeyError("[GSMEnv][Graph] Invalid node index.")
-        return True
+            # return True
 
     def reset(self):
         # if not (nx.is_frozen(self.g_move) and nx.is_frozen(self.g_view)):
@@ -90,23 +95,29 @@ class MapInfo:
         # no edge sanity check: (node_s, node_t, edge_index) -> dict {all attrs}
         return self.g_view[u_id][v_id][e_id]
 
+    def get_Gview_edge_attr_pos(self, u_id, v_id, e_id=0):
+        return self.g_view[u_id][v_id][e_id]["posture"]
+
+    def get_Gview_edge_attr_dir(self, u_id, v_id, e_id=0):
+        return self.g_view[u_id][v_id][e_id]["dir"]
+
     def get_Gview_edge_attr_prob(self, u_id, v_id, e_id):
         return self.g_view[u_id][v_id][e_id]["prob"]
 
     def get_Gview_edge_attr_dist(self, u_id, v_id):
         return self.g_view[u_id][v_id][0]["dist"]
 
-    def get_edge_prob_by_dir_pos_Gview(self, u_id, v_id, u_dir, pos_u_v):
-        # check all parallel edges(u, v), return edge_id & prob if it has_edge(dir, pos)
+    def get_Gview_prob_by_dir_pos(self, u_id, v_id, u_dir, pos_u_v):
+        # check all parallel edges(u, v), return edge_id & prob if it has edge (dir, pos)
         edge_view = self.g_view[u_id][v_id]
         _edge_index = [True if (edge_view[_id]['dir'] == u_dir) and (edge_view[_id]['posture'] == pos_u_v) else False for _id in edge_view]
         # return the prob value (-1 -> none indicator)
-        if sum(_edge_index):
+        if any(_edge_index):
             _e = _edge_index.index(True)
             return _e, edge_view[_e]["prob"]
         return -1, 0
 
-    def get_all_adj_by_id_dir_pos_Gview(self, u_id, u_dir, pos_u_v):
+    def get_Gview_neighbor_by_dir_pos(self, u_id, u_dir, pos_u_v):
         # return all valid nodes
         u_adj = self.g_view[u_id]
         list_adj = {}
@@ -116,12 +127,12 @@ class MapInfo:
                     list_adj[_node] = _edge
         return list_adj
 
-    def get_all_action_Gmove(self, n_id):
+    def get_Gmove_all_action(self, n_id):
         list_t_id = list(nx.neighbors(self.g_move, n_id))
         # get all valid action tokens from 'ACTION_LOOKUP' table
         return [self.get_Gmove_edge_attr(n_id, t_id) for t_id in list_t_id]
 
-    def get_action_node_dict_Gmove(self, n_id):
+    def get_Gmove_action_node_dict(self, n_id):
         adj_id = list(nx.neighbors(self.g_move, n_id))
         # send the whole 1st order subgraph (current_index, list_of_neighbor_index, list_of_action_nums)
         dict_dir_target = dict()
@@ -166,7 +177,5 @@ class MapInfo:
             self.counter = n_count
             return False
         else:
-            raise KeyError("[GSMEnv][Graph] Fatal error while loading parsed pickle files. Please check raw data and try again.")
-            return True
-
-
+            raise KeyError("[GSMEnv][Graph] Fatal error in loading pickle files. Please check raw data and try again.")
+            # return True
