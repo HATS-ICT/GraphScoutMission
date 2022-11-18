@@ -92,7 +92,7 @@ class ScoutMissionStd(gym.Env):
             action_move, action_look, action_body = actions
             # Find all first order neighbors of the current node
             _node = _agent.at_node
-            dict_move_node = self.map.get_Gmove_neighbor_dict(_node)
+            dict_move_node = self.map.get_Gmove_action_node_dict(_node)
             # Validate actions with masks
             if action_move and (action_move not in dict_move_node):
                 # If the action_mask turns on in learning, invalid actions should not appear.
@@ -386,7 +386,7 @@ class ScoutMissionStd(gym.Env):
         """
         obs_value = [0.1, 0.2, 0.3, 0.5, 1.0]
         death_decay = 0.7
-        self.states.reset_obs_per_step()
+        self.states.reset_step()
 
         # update elements in team red slot
         for r_id in self.agents.ids_R:
