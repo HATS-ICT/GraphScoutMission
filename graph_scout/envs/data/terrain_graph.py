@@ -140,6 +140,26 @@ class MapInfo:
             dict_dir_target[self.get_Gmove_edge_attr(n_id, t_id)] = t_id
         return dict_dir_target
 
+    # get the partial path to the target while keeping distance (first visible node)
+    def get_Gmove_path(self, n_src, n_tar, dist_neighbor=2):
+        full_path = self.get_Gmove_shortest_path(n_src, n_tar)
+        _len = len(full_path)
+        if _len:
+            if _len < dist_neighbor + 1:
+                return full_path
+            path = full_path[:-dist_neighbor]
+            tail = full_path[-dist_neighbor:-1]
+            for _tar in tail:
+                if not self.g_move.has_edge(_tar, n_tar):
+                    path.append(_tar)
+            return path
+        else:
+            raise KeyError("[GSMEnv][Graph] Invalid source target pair")
+
+    # get the shortest path by a pair of node_id
+    def get_Gmove_shortest_path(self, n_src, n_tar):
+        return nx.shortest_path(self.g_move, source=n_src, target=n_tar)
+
     def get_draw_attr_3D(self):
         # get node positions and labels for connectivity graph visualization
         label_coord = self.n_coord

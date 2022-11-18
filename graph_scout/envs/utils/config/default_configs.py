@@ -55,7 +55,7 @@ init_setup = {
             "rew_step_slow": 1,
             "rew_step_on": True},
         "episode": {
-            "rew_ep_health": {"type": "table", "num": [30, 20, 10, 5, 1], "bar": [0.05, 0.25, 0.5, 0.75, 0.99]},
+            "rew_ep_health": {"type": "table", "num": [30, 20, 10, 5, 1], "bar": [0.05, 0.25, 0.5, 0.75, 1.]},
             "rew_ep_delay": {"type": "segment", "start_step": 17, "min": 0, "max": 30, "inc": 1},
             "rew_ep_alive": {"type": "table", "num": [0, 10], "bar": [0, 1]},
             "rew_ep_on": True},
@@ -68,7 +68,7 @@ init_setup = {
     },
 
     "INIT_LOCAL": {
-        "masked_act": False,
+        "masked_act": True,
         "masked_obs": False,
         "masked_map": False,
         "has_sub_node": False,
