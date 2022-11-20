@@ -503,9 +503,9 @@ class ScoutMissionStd(gym.Env):
                 continue
             _HP = _agent.health
             index_aid[_index] = _aid  # = _HP for single-agent based rewards
+            health_max += _agent.health_max
             if _HP:
                 health_sum += _HP
-                health_max += _agent.health_max  # health_max += self.agents.list_init[_agent.gid, -1]
             else:
                 flag_all_alive = False
         # team based final reward for all agents in team red
