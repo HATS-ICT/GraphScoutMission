@@ -491,10 +491,10 @@ class ScoutMissionStd(gym.Env):
         rewards = [0] * self.states.num
         rew_cfg = self.rew_cfg["episode"]
         # TBD (lv1): only update red rewards now; should support both teams.
-        index_aid = {}
+        agent_alive = set()
+        agent_death = set()
         health_sum = 0
         health_max = 0
-        flag_all_alive = True
         # gather final states
         for _index, _aid in enumerate(self.agents.ids_ob):
             _agent = self.agents.gid[_aid]
@@ -502,27 +502,47 @@ class ScoutMissionStd(gym.Env):
             if _agent.team:
                 continue
             _HP = _agent.health
-            index_aid[_index] = _aid  # = _HP for single-agent based rewards
             health_max += _agent.health_max
             if _HP:
+                agent_alive.add(_index)
                 health_sum += _HP
             else:
-                flag_all_alive = False
+                agent_death.add(_index)
         # team based final reward for all agents in team red
-        team_delay = self._get_reward_from_segments(self.step_counter, **rew_cfg["rew_ep_delay"])
-        team_health = self._get_val_from_lists(health_sum/health_max, **rew_cfg["rew_ep_health"])
-        team_alive = self._get_val_from_lists(flag_all_alive, **rew_cfg["rew_ep_alive"])
-        reward_uniform = team_delay + team_health + team_alive
-        for _id in index_aid:
-            self.states.rewards[_id, 0] = reward_uniform
-            rewards[_id] += reward_uniform
+        team_delay = self._get_delay_reward_by_step(**rew_cfg["rew_ep_delay"])
+        health_index = self._get_val_from_list(health_sum/health_max, rew_cfg["rew_ep_health"]["bar"])
+        team_health = rew_cfg["rew_ep_health"]["num"][health_index]
+        total_reward = team_delay + team_health
+        if len(agent_death):
+            # do not award global health reward for death reds
+            for _id in agent_death:
+                self.states.rewards[_id, 0] = team_delay
+                rewards[_id] += team_delay
+        elif self.step_counter > rew_cfg["rew_ep_bonus"]["bar"]:
+            # bonus reward is conditioned on both health (all alive) and delay (> certain timestep threshold)
+            total_reward += rew_cfg["rew_ep_bonus"]["value"]
+        for _id in agent_alive:
+            self.states.rewards[_id, 0] = total_reward
+            rewards[_id] += total_reward
         return rewards
 
+    def _get_delay_reward_by_step(self, **val_dict):
+        delay_reward = val_dict["min"]
+        _index = self._get_val_from_list(self.step_counter, val_dict["step"])
+        if _index:
+            for _pre in range(1, _index):
+                delay_reward += (val_dict["step"][_pre] - val_dict["step"][_pre - 1]) * val_dict["inc"][_pre]
+            delay_reward += (self.step_counter - val_dict["step"][_index - 1]) * val_dict["inc"][_index - 1]
+        else:
+            delay_reward += (self.step_counter - val_dict["step"][0]) * val_dict["inc"][0]
+        if delay_reward > val_dict["max"]:
+            delay_reward = val_dict["max"]
+        return delay_reward
+
     @staticmethod
-    def _get_val_from_lists(target_val, **val_dict):
+    def _get_val_from_list(target_val, list_val):
         # find the index of the first element in the val_list that is greater than the target value
-        index = next(_id for _id, _val in enumerate(val_dict["bar"]) if _val >= target_val)
-        return val_dict["num"][index]
+        return next(_id for _id, _val in enumerate(list_val) if target_val <= _val)
 
     @staticmethod
     def _get_reward_from_segments(n_step, **val_dict):
