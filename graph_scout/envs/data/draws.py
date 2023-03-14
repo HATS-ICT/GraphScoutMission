@@ -15,9 +15,9 @@ def plot_out(map_dir):
     col_map = ["gold"] * len(map_info.n_coord)
     nx.draw_networkx(map_info.g_move, map_info.n_coord, node_color=col_map, node_size=150, font_size=6,
                      edge_color='#806C2A', width=0.5, arrows=True)
-    plt.savefig("graph_move.png", dpi=200, transparent=True)
+    plt.savefig("./graph_scout/envs/data/graph_move.png", dpi=200, transparent=True)
     nx.draw_networkx_edges(map_info.g_view, map_info.n_coord, edge_color="grey", width=0.3, arrows=False)
-    plt.savefig("graph_view.png", dpi=200, transparent=True)
+    plt.savefig("./graph_scout/envs/data/graph_view.png", dpi=200, transparent=True)
     plt.close()
 
 
@@ -68,5 +68,5 @@ def plot_subgraph(map_dir):
 
 
 if __name__ == "__main__":
-    # plot_out("./")
-    plot_subgraph("./")
+    plot_out("./")
+    # plot_subgraph("./")
