@@ -5,7 +5,10 @@ from graph_scout.envs.data.terrain_graph import MapInfo
 import graph_scout.envs.data.file_lookup as fc
 
 
-def check_parsed_files(path, map_lookup):
+def check_parsed_files(env_path, map_lookup):
+    assert check_dir(env_path), "[GSMEnv][File] Invalid path for loading env data: {}".format(env_path)
+    path = os.path.join(env_path, fc.PATH_LOOKUP["file_o"])
+    assert check_dir(path), "[GSMEnv][File] Can not find data in: {}".format(path)
     map_id = fc.MAP_LOOKUP[map_lookup]
     graph_move, flag_mv = check_file_in_dir(path, "{}{}.pickle".format(fc.DATA_LOOKUP["d_connectivity"], map_id))
     graph_view, flag_vw = check_file_in_dir(path, "{}{}.pickle".format(fc.DATA_LOOKUP["d_visibility"], map_id))
@@ -15,17 +18,12 @@ def check_parsed_files(path, map_lookup):
 
 
 def load_graph_files(env_path="./", map_lookup="Std", file_path=None):
-    assert check_dir(env_path), "[GSMEnv][File] Invalid path for loading env data: {}".format(env_path)
-    path_data = os.path.join(env_path, fc.PATH_LOOKUP["file_o"])
-    assert check_dir(path_data), "[GSMEnv][File] Can not find data in: {}".format(path_data)
-
     if file_path is not None:
         [graph_move, graph_view, data_table, data_coord] = file_path
     else:
-        [graph_move, graph_view, data_table, data_coord], _ = check_parsed_files(path_data, map_lookup)
+        [graph_move, graph_view, data_table, data_coord], _ = check_parsed_files(env_path, map_lookup)
     cur_map = MapInfo()
     cur_map.load_graph_pickle(graph_move, graph_view, data_table, data_coord)
-
     return cur_map
 
 
@@ -38,7 +36,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
         os.mkdir(path_obj)
 
     # 1. check existence of parsed files [option: overwrite existing files]
-    [graph_move, graph_view, obj_map, obj_pos], flags = check_parsed_files(path_obj, map_lookup)
+    [graph_move, graph_view, obj_map, obj_pos], flags = check_parsed_files(env_path, map_lookup)
     if if_overwrite:
         if any(flags):
             print("[GSMEnv][Info] Overwrite previous saved parsing data in \'{}\'".format(env_path))
@@ -56,7 +54,7 @@ def generate_graph_files(env_path="./", map_lookup="Std", if_overwrite=True):
     data_raw_view = [find_file_in_dir(path_file, fc.RAW_DATA_LOOKUP["r_visibility"][_file]) for _file in
                      fc.RAW_DATA_LOOKUP["r_visibility"]]
 
-    # preprocessing & utilities for raw data conventions
+    # 3 preprocessing & utilities for raw data conventions
     # from graph_scout.envs.data.node_coor_mapping import dict_node_id_pos
     from node_coor_mapping import dict_node_id_pos
     from copy import deepcopy
