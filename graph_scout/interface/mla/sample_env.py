@@ -27,7 +27,8 @@ def environment_sample_run(configs):
         branch_act_range = env.acts.shape()
         _id, _name, _team = env.agents.get_observing_agent_info()
         print(f"\n Agent names (dictionary keys): {_name}")
-        print(f"Init observations: {env.states.obs_full}")
+        # print(f"Init observations: {env.states.obs_full}")
+        print(env.rew_cfg)
 
         # issue with the current terrain map setup
         # print("[!!] Undesirable moving directions 86-69:")
@@ -48,8 +49,12 @@ def environment_sample_run(configs):
             list_obs, list_reward, list_done, _ = env.step(step_acts)
 
             # [!] get the dictionary's for RLlib training
-            dict_obs, dict_rew, dict_done = env.states.dump_dict()
-            print(f"###==> Step:{env.step_counter} of {env.max_step} | act:{step_acts} rew:{dict_rew}")
+            dict_obs, dict_rew, dict_done = env.states.dump_dict(env.step_counter)
+            print(f"###==> Step:{env.step_counter} of {env.max_step} | act:{step_acts} rew:{list_reward} {dict_rew}")
+            agent_dict = {}
+            for _a in env.agents.gid:
+                agent_dict[_a.name] = (_a.at_node, _a.health)
+            print(agent_dict)
             # print(f"Obs: {dict_obs}")
 
             # early stop
