@@ -29,7 +29,7 @@ class ScoutMissionStd(gym.Env):
         # 2 init Multi-branched action gym space & flattened observation gym space
         from gym import spaces
         self.action_space = [spaces.MultiDiscrete(self.acts.shape())] * self.states.num
-        self.observation_space = [spaces.Box(low=0., high=1., shape=(self.states.shape,))] * self.states.num
+        self.observation_space = [spaces.Box(low=0., high=5., shape=(self.states.shape * 2,))] * self.states.num
 
     def reset(self, force=False, **kwargs):
         self.step_counter = 0
@@ -357,16 +357,7 @@ class ScoutMissionStd(gym.Env):
         if not self.map.g_view.has_edge(u_id, v_id):
             # [TBD] debug for missing target
             return False
-        _, prob_raw = self._get_real_prob_by_src_tar(u_id, v_id)
-        prob_fin = prob_raw + self.zones[zone_id]["prob_add"]
-        # prob_fin = prob_fin * self.zones[zone_id]["prob_mul"]
-        # generate a random number in the range of [0., 1.]
-        tar_value = uniform(0., 1.)
-        # determine if cause damage during this interaction
-        return tar_value < prob_fin
-
-    # 2.2.3 get the raw probability for pair-wise engagement
-    def _get_real_prob_by_src_tar(self, u_id, v_id):
+        # _, prob_raw = self._get_real_prob_by_src_tar(u_id, v_id)
         u_node = self.engage_mat[u_id, u_id]
         v_node = self.engage_mat[v_id, v_id]
         u_dir = self.engage_mat[u_id, -3]
@@ -374,8 +365,23 @@ class ScoutMissionStd(gym.Env):
         v_pos = self.engage_mat[v_id, -2]
         pos_u_v = self._get_pos_u_v(u_pos, v_pos)
         # get the engagement probability
-        edge_num, prob_raw = self.map.get_Gview_prob_by_dir_pos(u_node, v_node, u_dir, pos_u_v)
-        return edge_num, prob_raw
+        _, _prob = self.map.get_Gview_prob_by_dir_pos(u_node, v_node, u_dir, pos_u_v)
+        # generate a random number in the range of [0., 1.]
+        tar_value = uniform(0., 1.)
+        # determine if cause damage during this interaction
+        return tar_value < _prob
+
+    # 2.2.3 get the raw probability for pair-wise engagement
+    # def _get_real_prob_by_src_tar(self, u_id, v_id):
+    #     u_node = self.engage_mat[u_id, u_id]
+    #     v_node = self.engage_mat[v_id, v_id]
+    #     u_dir = self.engage_mat[u_id, -3]
+    #     u_pos = self.engage_mat[u_id, -2]
+    #     v_pos = self.engage_mat[v_id, -2]
+    #     pos_u_v = self._get_pos_u_v(u_pos, v_pos)
+    #     # get the engagement probability
+    #     edge_num, prob_raw = self.map.get_Gview_prob_by_dir_pos(u_node, v_node, u_dir, pos_u_v)
+    #     return edge_num, prob_raw
 
     # 2.3 customized observation calculation
     def update_observation(self):
@@ -432,10 +438,10 @@ class ScoutMissionStd(gym.Env):
         """ zone token lookup for engage matrix updates
         # check self.configs["engage_token"] for more details
         # if there is an edge in the visibility FOV graph;
-        # [!] no self-loop in the visibility graph, check if two agents are on the same node first
+        # [!] no self-loop in the visibility graph
         """
         if node_src == node_tar:
-            return 4  # overlap
+            return 4  # overlap: check if two agents are on the same node first
         if self.map.g_view.has_edge(node_src, node_tar):
             dist = self.map.get_Gview_edge_attr_dist(node_src, node_tar)
             # -1 indicates there is no visibility range limitation
@@ -538,6 +544,23 @@ class ScoutMissionStd(gym.Env):
             reward = rew_min
         return reward
 
+    @staticmethod
+    def _get_reward_from_multi_inc(n_step, **rew_dict):
+        _bar = rew_dict["bar"]
+        _inc = rew_dict["inc"]
+        # The special case for linear reward with a single incremental value
+        if len(_bar) == 1:
+            return _inc * n_step
+        # General cases: multi-segment reward functions
+        rewards = 0
+        index = 1
+        # The last threshold element in reward_configs must obey: _bar[-1] >= max_step
+        while n_step > _bar[index]:
+            rewards += _inc[index - 1] * (_bar[index] - _bar[index - 1])
+            index += 1
+        rewards += _inc[index - 1] * (n_step - _bar[index - 1])
+        return rewards
+
     # 3.3. step done tokens -> list of lists
     def get_done_list(self, force=False):
         # get forced early stop signal
@@ -620,6 +643,21 @@ class ScoutMissionStd(gym.Env):
         self.map = MapInfo()
         self.map = load_graph_files(env_path=self.configs["env_path"], map_lookup=self.configs["map_id"])
         # TBD(lv3): call generate_files if parsed data not exist
+        # modifications on connectivity graph: forbidden zone
+        if self.configs["graph_forbidden_zone"]:
+            avoid_nodes = range(self.configs)
+            for _node in avoid_nodes:
+                self.map.g_move.remove_node(_node)
+        # modifications on the visibility graph: probs adjustment
+        # zone based probs amplifier
+        # self.zones = self.configs["engage_range"]
+        # if self.configs["map_range_modifier"]:
+        #     for _edge in self.map.g_view.edges:
+        #         _zone = self._get_zone_by_dist(self, _edge["dist"])
+        #         _edge["prob"] = _edge["prob"] * self.zones[_zone]["prob_mul"] + self.zones[_zone]["prob_add"]
+        # # imbalance-pairs advantage waypoints amplifier
+        # if self.configs["map_imbalance_modifier"]:
+        #     self._map_modify_imbalance_advantage()
 
     # 0.3. initialize all agents. [*] executable after calling self._init_env_config()
     def _init_agent_state(self):
@@ -645,7 +683,6 @@ class ScoutMissionStd(gym.Env):
             _node, _dir, _pos = self.agents.gid[_a].get_geo_tuple()
             self.engage_mat[_a, _a] = _node
             self.engage_mat[_a, -3:] = [_dir, _pos, _node]
-        self.zones = self.configs["engage_range"]
 
         # memory of heuristic agents [branch, signal_e, signal_h, target_agent, graph_dist, target_node]
         # _dts = len(self.agents.ids_dt)

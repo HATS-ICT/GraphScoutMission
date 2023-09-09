@@ -56,7 +56,9 @@ init_setup = {
             "rew_step_on": True},
         "episode": {
             "rew_ep_health": {"type": "table", "num": [30, 20, 10, 5, 1], "bar": [0.05, 0.25, 0.5, 0.75, 1.]},
-            "rew_ep_delay": {"type": "segment", "start_step": 17, "min": 0, "max": 30, "inc": 1},
+            "rew_ep_delay": {"type": "segment", "start_step": 17, "min": 0, "max": 50, "inc": 1},
+            "rew_ep_delay_new": {"type": "multi-inc", "bar": [0, 17, 25, 33, 41, 49, 255], "inc": [0, 0.5, 1, 1.5, 2, 3, 3]},
+            "rew_ep_delay_more": {"type": "multi-inc", "bar": [0, 17, 25, 33, 41, 49, 255], "inc": [0, 0.5, 1, 2, 3, 5, 5]},
             "rew_ep_alive": {"type": "table", "num": [0, 10], "bar": [0, 1]},
             "rew_ep_on": True},
     },
