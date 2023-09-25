@@ -647,11 +647,13 @@ class ScoutMissionStd(gym.Env):
         from graph_scout.envs.data.terrain_graph import MapInfo
         # load or generate graphs
         self.map = MapInfo()
-        _files, _flags = check_parsed_files(self.configs["env_path"], self.configs["map_id"])
-        if all(_flags):
-            self.map = load_graph_files(self.configs["env_path"], self.configs["map_id"], _files)
-        else:
-            self.map = generate_graph_files(self.configs["env_path"], self.configs["map_id"])
+        # _files, _flags = check_parsed_files(self.configs["env_path"], self.configs["map_id"])
+        # if all(_flags):
+        #     self.map = load_graph_files(self.configs["env_path"], self.configs["map_id"], _files)
+        # else:
+        #     self.map = generate_graph_files(self.configs["env_path"], self.configs["map_id"])
+        # generate new heterogeneous graphs during init to avoid GEXF/GML/pickle I/O issues..
+        self.map = generate_graph_files(self.configs["env_path"], self.configs["map_id"])
         # set up range limits
         self.zones = self.configs["engage_range"]
         # manually adjust the probs for imbalance node pairs

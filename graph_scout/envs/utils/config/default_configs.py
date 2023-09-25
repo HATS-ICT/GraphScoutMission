@@ -85,7 +85,7 @@ init_setup = {
 
     "LOCAL_CONTENT": {
         "penalty_invalid": 0,  # penalty for unmasked invalid MOVE actions
-        "masked_node_list": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+        "masked_node_list": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
         "imbalance_pairs": [(70, 69, [1, 3]),
                             (70, 71, [2, 4]),
                             (69, 68, [2, 3]),
